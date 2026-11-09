@@ -21,21 +21,51 @@ def export_policy(agent, lab):
         model = {'kind': 'qtable', 'values': q.tolist()}
     elif lab == 1 and len(list(Path('.').glob('*.zip'))) == 1:
         import torch
-        from stable_baselines3 import PPO
-        ppo = PPO.load(
-            next(Path('.').glob('*.zip')),
-            device='cpu',
-            custom_objects={
-                'learning_rate': 0.0,
-                'lr_schedule': lambda _: 0.0,
-                'clip_range': lambda _: 0.2,
-            },
-        )
-        policy = ppo.policy
+        zip_path = next(Path('.').glob('*.zip'))
+        custom_objects = {
+            'learning_rate': 0.0,
+            'lr_schedule': lambda _: 0.0,
+            'clip_range': lambda _: 0.2,
+        }
+        policy = None
+        raw_layers = None
+        try:
+            from stable_baselines3 import PPO
+            model = PPO.load(
+                zip_path,
+                device='cpu',
+                custom_objects=custom_objects,
+            )
+            policy = model.policy
+            raw_layers = [*policy.mlp_extractor.policy_net, policy.action_net]
+        except Exception:
+            try:
+                from stable_baselines3 import DQN
+                model = DQN.load(
+                    zip_path,
+                    device='cpu',
+                    custom_objects=custom_objects,
+                )
+                policy = model.policy
+                raw_layers = list(policy.q_net.q_net)
+            except Exception:
+                try:
+                    from stable_baselines3 import A2C
+                    model = A2C.load(
+                        zip_path,
+                        device='cpu',
+                        custom_objects=custom_objects,
+                    )
+                    policy = model.policy
+                    raw_layers = [*policy.mlp_extractor.policy_net, policy.action_net]
+                except Exception:
+                    pass
+        if policy is None or raw_layers is None:
+            raise ValueError('Expected discrete LunarLander model (PPO, DQN, A2C)')
         if policy.observation_space.shape != (8,) or policy.action_space.n != 4:
-            raise ValueError('Expected discrete LunarLander PPO')
+            raise ValueError('Expected discrete LunarLander model')
         layers = []
-        for layer in [*policy.mlp_extractor.policy_net, policy.action_net]:
+        for layer in raw_layers:
             if isinstance(layer, torch.nn.Linear):
                 layers.append({'weight': layer.weight.detach().cpu().tolist(),
                                'bias': layer.bias.detach().cpu().tolist(), 'activation': 'linear'})
@@ -45,7 +75,7 @@ def export_policy(agent, lab):
                 raise ValueError('Export supports Linear, Tanh and ReLU MLP layers')
         model = {'kind': 'mlp', 'layers': layers}
     else:
-        raise ValueError('Add browser_policy.json, qtable.npy or a discrete PPO MLP ZIP')
+        raise ValueError('Add browser_policy.json, qtable.npy or a discrete RL MLP ZIP')
     # Independently compare the exported forward pass with the submitted agent.
     # This catches preprocessing, different checkpoints and custom feature extractors.
     if model.get('kind') == 'random':

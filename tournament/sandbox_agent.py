@@ -30,7 +30,7 @@ def main():
         try:
             result = export_policy(agent, request['lab'])
         except Exception:
-            result = {'error': 'No compatible browser export. Supply browser_policy.json or a supported Q-table/PPO MLP.'}
+            result = {'error': 'No compatible browser export. Supply browser_policy.json or a supported Q-table/RL MLP.'}
         protocol.write(json.dumps(result, allow_nan=False) + '\n')
         return
     for line in sys.stdin.buffer:
