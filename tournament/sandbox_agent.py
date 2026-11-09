@@ -16,18 +16,6 @@ def main():
     sys.path.insert(0, '/submission')
     os.chdir('/submission')
     import numpy as np
-    try:
-        from stable_baselines3 import PPO
-        _orig_ppo_load = PPO.load
-        def _safe_ppo_load(path, *args, **kwargs):
-            custom = kwargs.setdefault('custom_objects', {})
-            custom.setdefault('learning_rate', 0.0)
-            custom.setdefault('lr_schedule', lambda _: 0.0)
-            custom.setdefault('clip_range', lambda _: 0.2)
-            return _orig_ppo_load(path, *args, **kwargs)
-        PPO.load = _safe_ppo_load
-    except ImportError:
-        pass
     spec = importlib.util.spec_from_file_location('student_agent', '/submission/agent.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
