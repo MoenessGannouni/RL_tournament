@@ -22,7 +22,15 @@ def export_policy(agent, lab):
     elif lab == 1 and len(list(Path('.').glob('*.zip'))) == 1:
         import torch
         from stable_baselines3 import PPO
-        ppo = PPO.load(next(Path('.').glob('*.zip')), device='cpu')
+        ppo = PPO.load(
+            next(Path('.').glob('*.zip')),
+            device='cpu',
+            custom_objects={
+                'learning_rate': 0.0,
+                'lr_schedule': lambda _: 0.0,
+                'clip_range': lambda _: 0.2,
+            },
+        )
         policy = ppo.policy
         if policy.observation_space.shape != (8,) or policy.action_space.n != 4:
             raise ValueError('Expected discrete LunarLander PPO')
