@@ -14,8 +14,26 @@ def export_policy(agent, lab):
         if declared.stat().st_size > 2_000_000:
             raise ValueError('Browser policy exceeds 2 MB')
         model = json.loads(declared.read_text())
-    elif lab == 2 and Path('qtable.npy').is_file():
-        q = np.load('qtable.npy', allow_pickle=False)
+    elif lab == 2:
+        q = None
+        # Check for pickle-based Q-tables first (as saved by Lab 2 course notebook), then raw numpy
+        pkl_candidates = [Path('q-learning.pkl'), Path('qtable.pkl'), *Path('.').glob('*.pkl'), *Path('.').glob('*.pickle')]
+        for pkl_file in pkl_candidates:
+            if pkl_file.is_file():
+                import pickle
+                with open(pkl_file, 'rb') as f:
+                    raw = pickle.load(f)
+                if isinstance(raw, dict) and 'qtable' in raw:
+                    q = np.asarray(raw['qtable'], dtype=np.float64)
+                elif isinstance(raw, np.ndarray):
+                    q = np.asarray(raw, dtype=np.float64)
+                if q is not None and q.shape == (500, 6):
+                    break
+                q = None
+        if q is None and Path('qtable.npy').is_file():
+            q = np.load('qtable.npy', allow_pickle=False)
+        if q is None:
+            raise ValueError('Add browser_policy.json, q-learning.pkl or qtable.npy')
         if q.shape != (500, 6) or not np.isfinite(q).all():
             raise ValueError('Expected finite Taxi Q-table with shape (500, 6)')
         model = {'kind': 'qtable', 'values': q.tolist()}
@@ -75,7 +93,7 @@ def export_policy(agent, lab):
                 raise ValueError('Export supports Linear, Tanh and ReLU MLP layers')
         model = {'kind': 'mlp', 'layers': layers}
     else:
-        raise ValueError('Add browser_policy.json, qtable.npy or a discrete RL MLP ZIP')
+        raise ValueError('Add browser_policy.json, q-learning.pkl, qtable.npy or a discrete RL MLP ZIP')
     # Independently compare the exported forward pass with the submitted agent.
     # This catches preprocessing, different checkpoints and custom feature extractors.
     if model.get('kind') == 'random':
