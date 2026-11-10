@@ -1,8 +1,15 @@
 import os
 import numpy as np
+import pickle
 
-_dir = os.path.dirname(os.path.abspath(__file__))
-_qtable = np.load(os.path.join(_dir, 'qtable.npy'))
+# Load the model
+model_path = os.path.join(os.path.dirname(__file__), "q-learning.pkl")
+with open(model_path, "rb") as f:
+    model = pickle.load(f)
+    
+Qtable = model["qtable"]
 
 def agent(observation):
-    return int(np.argmax(_qtable[observation, :]))
+    # Select the action with the maximum expected reward
+    action = np.argmax(Qtable[observation][:])
+    return int(action)
