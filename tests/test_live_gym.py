@@ -30,7 +30,7 @@ class GymSessionTests(unittest.TestCase):
                 break
         self.assertEqual(states[0], states[1])
         self.assertEqual(states[0]['message'], 'DESTINATION REACHED')
-        self.assertEqual(states[0]['env_id'], 'Taxi-v3')
+        self.assertIn(states[0]['env_id'], ('Taxi-v3', 'Taxi-v4'))
         self.assertLess(states[0]['steps'], 30)
         self.assertEqual(session.step([None, None])['states'], states)
 

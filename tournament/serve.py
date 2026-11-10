@@ -54,7 +54,16 @@ class Session:
         self.updated = time.monotonic()
         try:
             for policy in policies:
-                env = gym.make('Taxi-v3' if lab == 2 else 'LunarLander-v3', render_mode='rgb_array')
+                candidates = ['Taxi-v4', 'Taxi-v3'] if lab == 2 else ['LunarLander-v3', 'LunarLander-v2']
+                env = None
+                for candidate in candidates:
+                    try:
+                        env = gym.make(candidate, render_mode='rgb_array')
+                        break
+                    except Exception:
+                        pass
+                if env is None:
+                    raise RuntimeError(f'Could not create environment for lab {lab}')
                 self.envs.append(env)
                 obs, _ = env.reset(seed=seed)
                 env.action_space.seed(seed)
